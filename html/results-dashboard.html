@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exam Results Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial; background: #1a1a2e; padding: 20px; }
+        .container { max-width: 1400px; margin: auto; background: white; border-radius: 12px; padding: 30px; }
+        h1 { color: #16213e; margin-bottom: 10px; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 30px 0; }
+        .stat-card { background: #f8f9fa; padding: 20px; text-align: center; border-radius: 10px; }
+        .stat-number { font-size: 36px; font-weight: bold; color: #e94560; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #16213e; color: white; }
+        .pass { color: #28a745; font-weight: bold; }
+        .fail { color: #dc3545; font-weight: bold; }
+        button { background: #e94560; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .filter { margin: 20px 0; }
+        select { padding: 10px; margin-left: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Student Exam Results Dashboard</h1>
+        <p>View all exam attempts and student performance</p>
+        
+        <div class="stats" id="stats"></div>
+        
+        <div class="filter">
+            <label>Filter by Subject:</label>
+            <select id="subjectFilter" onchange="displayResults()">
+                <option value="all">All Subjects</option>
+            </select>
+            <button onclick="clearAllResults()">🗑️ Clear All Results</button>
+            <button onclick="exportResults()">📥 Export to CSV</button>
+        </div>
+        
+        <div id="resultsTable"></div>
+    </div>
+
+    <script>
+        let allResults = JSON.parse(localStorage.getItem('examResults')) || [];
+        let subjects = JSON.parse(localStorage.getItem('examSubjects')) || [];
+
+        function loadSubjectFilter() {
+            const select = document.getElementById('subjectFilter');
+            const uniqueSubjects = [...new Set(allResults.map(r => r.subjectId))];
+            
+            uniqueSubjects.forEach(subjectId => {
+                const subject = subjects.find(s => s.id === subjectId);
+                if (subject) {
+                    select.innerHTML += `<option value="${subjectId}">${subject.name}</option>`;
+                }
+            });
+        }
+
+        function displayResults() {
+            const filter = document.getElementById('subjectFilter').value;
+            let filtered = allResults;
+            
+            if (filter !== 'all') {
+                filtered = allResults.filter(r => r.subjectId == filter);
+            }
+            
+            // Update stats
+            const totalStudents = filtered.length;
+            const avgScore = filtered.length > 0 ? Math.round(filtered.reduce((sum, r) => sum + r.percentage, 0) / filtered.length) : 0;
+            const passed = filtered.filter(r => r.passed).length;
+            const failed = totalStudents - passed;
+            
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card"><div class="stat-number">${totalStudents}</div><div>Total Attempts</div></div>
+                <div class="stat-card"><div class="stat-number">${avgScore}%</div><div>Average Score</div></div>
+                <div class="stat-card"><div class="stat-number">${passed}</div><div>Passed</div></div>
+                <div class="stat-card"><div class="stat-number">${failed}</div><div>Failed</div></div>
+            `;
+            
+            if (filtered.length === 0) {
+                document.getElementById('resultsTable').innerHTML = '<p style="text-align: center; padding: 40px;">No results yet. Students need to take exams.</p>';
+                return;
+            }
+            
+            let html = `<table><th>Student Name</th><th>Subject</th><th>Score</th><th>Percentage</th><th>Status</th><th>Date</th></tr>`;
+            filtered.forEach(result => {
+                html += `
+                    <tr>
+                        <td>${result.studentName}</td>
+                        <td>${result.subject}</td>
+                        <td>${result.score}/${result.total}</td>
+                        <td>${result.percentage}%</td>
+                        <td class="${result.passed ? 'pass' : 'fail'}">${result.passed ? 'PASSED' : 'FAILED'}</td>
+                        <td>${result.date}</td>
+                    </tr>
+                `;
+            });
+            html += '</table>';
+            document.getElementById('resultsTable').innerHTML = html;
+        }
+        
+        function clearAllResults() {
+            if (confirm('⚠️ Delete ALL student exam results? This cannot be undone!')) {
+                allResults = [];
+                localStorage.setItem('examResults', JSON.stringify(allResults));
+                displayResults();
+            }
+        }
+        
+        function exportResults() {
+            let csv = "Student Name,Subject,Score,Total,Percentage,Status,Date\n";
+            allResults.forEach(r => {
+                csv += `"${r.studentName}","${r.subject}",${r.score},${r.total},${r.percentage}%,${r.passed ? 'PASSED' : 'FAILED'},"${r.date}"\n`;
+            });
+            
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'exam-results.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        loadSubjectFilter();
+        displayResults();
+    </script>
+</body>
+</html>
