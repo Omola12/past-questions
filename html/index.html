@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exam Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; margin: 0; }
+        .container { max-width: 1200px; margin: auto; padding: 40px 20px; text-align: center; }
+        h1 { color: white; font-size: 48px; margin-bottom: 20px; }
+        .subtitle { color: rgba(255,255,255,0.9); font-size: 20px; margin-bottom: 50px; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .card { background: white; padding: 30px; border-radius: 20px; text-decoration: none; color: #333; transition: transform 0.2s; display: block; }
+        .card:hover { transform: translateY(-5px); }
+        .card h2 { color: #e94560; margin-bottom: 15px; }
+        .card p { color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Online Examination Portal</h1>
+        <div class="subtitle">Take exams or manage subjects</div>
+        
+        <div class="cards">
+            <a href="admin-dashboard.html" class="card">
+                <h2>🔒 Admin Panel</h2>
+                <p>Create subjects, add questions, set correct answers</p>
+            </a>
+            <a href="results-dashboard.html" class="card">
+                <h2>📊 Results Dashboard</h2>
+                <p>View student performance and export results</p>
+            </a>
+        </div>
+        
+        <div style="margin-top: 50px; color: white;">
+            <p>Students need a direct link from the admin panel to take exams</p>
+        </div>
+    </div>
+</body>
+</html>
