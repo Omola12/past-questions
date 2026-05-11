@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Exam</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial; background: #f0f2f5; }
+        .header { background: #1a1a2e; color: white; padding: 30px; text-align: center; }
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        .question-card { background: white; padding: 25px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .question-text { font-weight: bold; font-size: 18px; margin-bottom: 20px; color: #1a1a2e; }
+        .option { margin: 12px 0; padding: 12px; background: #f8f9fa; border-radius: 8px; cursor: pointer; }
+        .option:hover { background: #e9ecef; }
+        .option input { margin-right: 12px; transform: scale(1.2); }
+        .submit-btn { background: #28a745; color: white; padding: 15px 40px; font-size: 18px; border: none; border-radius: 50px; cursor: pointer; margin: 20px auto; display: block; }
+        .result-card { background: white; padding: 30px; border-radius: 12px; margin-top: 30px; text-align: center; }
+        .score { font-size: 64px; font-weight: bold; }
+        .pass { color: #28a745; }
+        .fail { color: #dc3545; }
+        .answer-key { text-align: left; margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee; }
+        .student-info { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .student-info input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 id="examTitle">Loading Exam...</h1>
+        <p>Answer all questions. Select one answer per question.</p>
+    </div>
+
+    <div class="container">
+        <div class="student-info">
+            <input type="text" id="studentName" placeholder="Enter your full name" style="width: 100%;">
+        </div>
+
+        <div id="examContent"></div>
+        
+        <button class="submit-btn" onclick="submitExam()">✅ Submit Exam</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let examData = null;
+        let currentSubjectId = null;
+        let studentAnswers = {};
+
+        // Get subject ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        currentSubjectId = parseInt(urlParams.get('subject'));
+
+        function loadExam() {
+            const subjects = JSON.parse(localStorage.getItem('examSubjects')) || [];
+            examData = subjects.find(s => s.id === currentSubjectId);
+            
+            if (!examData) {
+                document.getElementById('examContent').innerHTML = `
+                    <div style="background: #fff3cd; padding: 40px; text-align: center; border-radius: 12px;">
+                        <h3>⚠️ Exam Not Found</h3>
+                        <p>The exam you're looking for doesn't exist. Please check the link.</p>
+                    </div>
+                `;
+                document.getElementById('examTitle').innerText = 'Exam Not Found';
+                return;
+            }
+
+            document.getElementById('examTitle').innerHTML = `📝 ${examData.name} Exam`;
+            
+            if (!examData.questions || examData.questions.length === 0) {
+                document.getElementById('examContent').innerHTML = `
+                    <div style="background: #fff3cd; padding: 40px; text-align: center; border-radius: 12px;">
+                        <h3>⚠️ No Questions Yet</h3>
+                        <p>This exam has no questions. Please contact your instructor.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Load exam questions
+            let html = '';
+            examData.questions.forEach((q, idx) => {
+                html += `
+                    <div class="question-card">
+                        <div class="question-text">${idx + 1}. ${q.text}</div>
+                        <div class="option" onclick="selectAnswer(${idx}, 'A')">
+                            <input type="radio" name="q${idx}" value="A" id="q${idx}_A">
+                            <label for="q${idx}_A">A. ${q.A}</label>
+                        </div>
+                        <div class="option" onclick="selectAnswer(${idx}, 'B')">
+                            <input type="radio" name="q${idx}" value="B" id="q${idx}_B">
+                            <label for="q${idx}_B">B. ${q.B}</label>
+                        </div>
+                        <div class="option" onclick="selectAnswer(${idx}, 'C')">
+                            <input type="radio" name="q${idx}" value="C" id="q${idx}_C">
+                            <label for="q${idx}_C">C. ${q.C}</label>
+                        </div>
+                        <div class="option" onclick="selectAnswer(${idx}, 'D')">
+                            <input type="radio" name="q${idx}" value="D" id="q${idx}_D">
+                            <label for="q${idx}_D">D. ${q.D}</label>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('examContent').innerHTML = html;
+        }
+
+        function selectAnswer(questionIndex, answer) {
+            const radio = document.getElementById(`q${questionIndex}_${answer}`);
+            radio.checked = true;
+            studentAnswers[questionIndex] = answer;
+        }
+
+        function submitExam() {
+            const studentName = document.getElementById('studentName').value.trim();
+            if (!studentName) {
+                alert('Please enter your name before submitting');
+                return;
+            }
+
+            if (!examData || !examData.questions) return;
+
+            let score = 0;
+            let results = [];
+
+            for (let i = 0; i < examData.questions.length; i++) {
+                const userAnswer = studentAnswers[i];
+                const correctAnswer = examData.questions[i].correct;
+                const isCorrect = userAnswer === correctAnswer;
+                
+                if (isCorrect) score++;
+                
+                results.push({
+                    num: i + 1,
+                    user: userAnswer || 'Not answered',
+                    correct: correctAnswer,
+                    isCorrect: isCorrect
+                });
+            }
+
+            const percentage = Math.round((score / examData.questions.length) * 100);
+            const passed = percentage >= examData.passingScore;
+            
+            // Save result
+            const allResults = JSON.parse(localStorage.getItem('examResults')) || [];
+            allResults.push({
+                studentName: studentName,
+                subject: examData.name,
+                subjectId: currentSubjectId,
+                score: score,
+                total: examData.questions.length,
+                percentage: percentage,
+                passed: passed,
+                date: new Date().toLocaleString(),
+                answers: studentAnswers
+            });
+            localStorage.setItem('examResults', JSON.stringify(allResults));
+
+            // Display results
+            document.getElementById('result').innerHTML = `
+                <div class="result-card">
+                    <h2>Exam Results - ${examData.name}</h2>
+                    <div class="score ${passed ? 'pass' : 'fail'}">${score} / ${examData.questions.length}</div>
+                    <div style="font-size: 28px;">${percentage}%</div>
+                    <div style="font-size: 24px; margin: 10px 0;">${passed ? '✅ PASSED' : '❌ FAILED'}</div>
+                    <div>${passed ? `🎉 Congratulations ${studentName}! You passed!` : `📚 Sorry ${studentName}, you need ${examData.passingScore}% to pass.`}</div>
+                    
+                    <div class="answer-key">
+                        <h3>Answer Key:</h3>
+                        ${results.map(r => `
+                            <p>${r.num}. ${r.isCorrect ? '✅' : '❌'} Your answer: ${r.user} | Correct: ${r.correct}</p>
+                        `).join('')}
+                    </div>
+                    
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer;">Take Another Exam</button>
+                </div>
+            `;
+            
+            // Scroll to results
+            document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        loadExam();
+    </script>
+</body>
+</html>
